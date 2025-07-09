@@ -1,0 +1,21 @@
+{
+  "id": "org.example.youtube",
+  "version": "1.0.0",
+  "name": "YouTube Sheet Addon (Channels)",
+  "description": "YouTube videi iz Google Sheeta kao kanali",
+  "resources": [
+    "catalog",
+    "meta",
+    "stream"
+  ],
+  "types": [
+    "channel"
+  ],
+  "catalogs": [
+    {
+      "type": "channel",
+      "id": "yt-sheet",
+      "name": "YouTube iz Google Sheeta"
+    }
+  ]
+}
