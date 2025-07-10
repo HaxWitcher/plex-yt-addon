@@ -7,7 +7,7 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX
 
 // Round-robin API baze
 const STREAM_APIS = [
-  'plex-yt-production.up.railway.app'
+  'https://plex-yt-production.up.railway.app'
  // 'https://haxwitcher-yt2-plex.hf.space',
   //'https://haxwitcher-yt3-plex.hf.space',//
   //'https://haxwitcher-yt4-plex.hf.space',//
