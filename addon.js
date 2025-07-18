@@ -5,13 +5,10 @@ const { addonBuilder } = require('stremio-addon-sdk');
 // Javna CSV lista
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX8ApUjUe2mCbjHrd3OR4HJ46OH3ai2wLHwkWR5_1dIp3BDjQpq4wHgsi1_pDEeuSi/pub?output=csv';
 
-// Round-robin API baze
+// Round‑robin API baze
 const STREAM_APIS = [
   'http://91.99.224.143'
-  //'https://my-app-love-first-app.hf.space',//
-  //'https://ivan-apps-ivan-ai-download.hf.space',//
-  //'https://ai-yt-test-yt-app.hf.space'//
-  //'https://haxwitcher-yt5-plex.hf.space'//
+  // ... ostali API-ji
 ];
 let rrIndex = 0;
 function getNextApi() {
@@ -20,13 +17,15 @@ function getNextApi() {
   return api;
 }
 
-// Izvlači YouTube ID iz URL-a
+// Izvlači YouTube ID iz URL-a (sada uklanja i query string pre parsiranja)
 function extractId(url) {
-  const m = url.match(/(?:v=|\.be\/)([A-Za-z0-9_-]{11})/);
+  // prvo otrezni sve nakon ? ili &
+  const clean = url.split(/[?&]/)[0];
+  const m = clean.match(/(?:v=|\.be\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
-// Učita CSV, parsira timestamp, title i sortira po timestamp-u opadajuće
+// Učita CSV, parsira timestamp, title i sortira po timestamp‑u opadajuće
 async function fetchList() {
   const res = await fetch(CSV_URL);
   const txt = await res.text();
@@ -63,14 +62,13 @@ builder.defineCatalogHandler(async ({ id }) => {
     metas: list.map(v => ({
       id:     v.id,
       type:   'channel',
-      name:   v.name,    // sada se vidi title iz CSV
+      name:   v.name,
       poster: v.poster,
     }))
   };
 });
 
 // === Meta handler ===
-// Prikazuje title iz CSV umesto samog ID-ja
 builder.defineMetaHandler(async ({ id, type }) => {
   const list  = await fetchList();
   const entry = list.find(v => v.id === id) || {};
@@ -86,7 +84,7 @@ builder.defineMetaHandler(async ({ id, type }) => {
   };
 });
 
-// === Stream handler (round-robin baza) ===
+// === Stream handler ===
 builder.defineStreamHandler(async ({ type, id }) => {
   if (type !== 'channel') {
     return { streams: [] };
