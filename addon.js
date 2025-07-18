@@ -18,29 +18,25 @@ function getNextApi() {
   return api;
 }
 
-// Izvlači YouTube ID iz URL‑a (podržava i youtu.be linkove)
-function extractId(url) {
-  // uklanja sve posle videa (?si=... itd)
-  const clean = url.split(/[?&]/)[0];
+// Izvlači YouTube ID iz URL-a (bilo da je youtube.com/watch ili youtu.be)
+function extractId(rawUrl) {
+  // otkloni query parametre
+  const clean = rawUrl.split(/[?&]/)[0];
   const m = clean.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
-// Učita CSV, parsira timestamp, title i sortira po timestamp‑u opadajuće
+// Učita CSV, parsira timestamp, title i sortira po timestamp-u opadajuće
 async function fetchList() {
-  // cache‑buster kako bi uvek dohvatili najnoviji CSV
-  const url = `${CSV_URL}&_=${Date.now()}`;
-  const res = await fetch(url, {
-    headers: { 'Cache-Control': 'no-cache' }
-  });
+  const res = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-cache' } });
   const txt = await res.text();
   return txt
     .trim()
     .split('\n')
     .slice(1)
     .map(line => {
-      const [ts, rawUrl, ...rest] = line.split(',');
-      const id    = extractId(rawUrl.trim());
+      const [ts, url, ...rest] = line.split(',');
+      const id    = extractId(url);
       if (!id) return null;
       const title = rest.join(',').trim() || id;
       return {
@@ -51,7 +47,7 @@ async function fetchList() {
       };
     })
     .filter(Boolean)
-    .sort((a, b) => b.ts - a.ts);  // najnoviji prvi
+    .sort((a, b) => b.ts - a.ts);
 }
 
 const manifest = require('./manifest.json');
@@ -100,7 +96,7 @@ builder.defineStreamHandler(async ({ type, id }) => {
 
   return {
     streams: [{
-      title:  `YouTube stream (${id})`,
+      title:  `YouTube stream`,
       url:    apiUrl,
       isLive: false
     }]
