@@ -1,8 +1,8 @@
 {
   "id": "org.example.youtube",
   "version": "1.0.0",
-  "name": "YouTube Sheet Addon (Channels)",
-  "description": "YouTube videi iz Google Sheeta kao kanali",
+  "name": "YouTube - Full HD (1080p)",
+  "description": "YouTube video bez oglasa",
   "resources": [
     "catalog",
     "meta",
@@ -15,7 +15,7 @@
     {
       "type": "channel",
       "id": "yt-sheet",
-      "name": "YouTube iz Google Sheeta"
+      "name": "YouTube Video"
     }
   ]
 }
