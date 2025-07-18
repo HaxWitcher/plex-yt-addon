@@ -17,11 +17,34 @@ function getNextApi() {
   return api;
 }
 
-// Izvlači YouTube ID iz URL-a (sada uklanja i query string pre parsiranja)
+// Izvlači YouTube ID iz URL-a, sada pokriva:
+// - https://youtu.be/ID?query
+// - https://www.youtube.com/watch?v=ID
+// - https://www.youtube.com/shorts/ID
+// - https://www.youtube.com/embed/ID
+// - https://www.youtube.com/v/ID
 function extractId(url) {
-  // prvo otrezni sve nakon ? ili &
-  const clean = url.split(/[?&]/)[0];
-  const m = clean.match(/(?:v=|\.be\/)([A-Za-z0-9_-]{11})/);
+  try {
+    const u = new URL(url.trim());
+    const hostname = u.hostname.replace('www.', '');
+    if (hostname === 'youtu.be') {
+      return u.pathname.slice(1);
+    }
+    if (hostname === 'youtube.com' || hostname === 'm.youtube.com' || hostname === 'youtube-nocookie.com') {
+      if (u.pathname === '/watch') {
+        return u.searchParams.get('v');
+      }
+      const parts = u.pathname.split('/');
+      // /shorts/ID
+      if (parts[1] === 'shorts' || parts[1] === 'embed' || parts[1] === 'v') {
+        return parts[2];
+      }
+    }
+  } catch (e) {
+    // ako URL konstruktor ne uspe, pada na regex
+  }
+  // fallback: pokuša da izvuče sa regexom
+  const m = url.match(/(?:v=|\/embed\/|\.be\/|\/shorts\/|\/v\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
