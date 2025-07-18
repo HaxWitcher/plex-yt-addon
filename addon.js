@@ -7,9 +7,11 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX
 
 // Round‑robin API baze
 const STREAM_APIS = [
-  'https://haxwitcher-yt-plex.hf.space',
-  'https://haxwitcher-yt2-plex.hf.space',
-  'https://haxwitcher-yt3-plex.hf.space'
+  'http://91.99.224.143'
+  //'https://my-app-love-first-app.hf.space',//
+  //'https://ivan-apps-ivan-ai-download.hf.space',//
+  //'https://ai-yt-test-yt-app.hf.space'//
+  //'https://haxwitcher-yt5-plex.hf.space'//
 ];
 let rrIndex = 0;
 function getNextApi() {
