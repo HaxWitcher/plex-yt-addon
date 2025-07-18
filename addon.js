@@ -7,8 +7,9 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX
 
 // Round‑robin API baze
 const STREAM_APIS = [
-  'http://91.99.224.143'
-  // ... ostali API-ji
+  'https://haxwitcher-yt-plex.hf.space',
+  'https://haxwitcher-yt2-plex.hf.space',
+  'https://haxwitcher-yt3-plex.hf.space'
 ];
 let rrIndex = 0;
 function getNextApi() {
@@ -17,48 +18,29 @@ function getNextApi() {
   return api;
 }
 
-// Izvlači YouTube ID iz URL-a, sada pokriva:
-// - https://youtu.be/ID?query
-// - https://www.youtube.com/watch?v=ID
-// - https://www.youtube.com/shorts/ID
-// - https://www.youtube.com/embed/ID
-// - https://www.youtube.com/v/ID
+// Izvlači YouTube ID iz URL‑a (podržava i youtu.be linkove)
 function extractId(url) {
-  try {
-    const u = new URL(url.trim());
-    const hostname = u.hostname.replace('www.', '');
-    if (hostname === 'youtu.be') {
-      return u.pathname.slice(1);
-    }
-    if (hostname === 'youtube.com' || hostname === 'm.youtube.com' || hostname === 'youtube-nocookie.com') {
-      if (u.pathname === '/watch') {
-        return u.searchParams.get('v');
-      }
-      const parts = u.pathname.split('/');
-      // /shorts/ID
-      if (parts[1] === 'shorts' || parts[1] === 'embed' || parts[1] === 'v') {
-        return parts[2];
-      }
-    }
-  } catch (e) {
-    // ako URL konstruktor ne uspe, pada na regex
-  }
-  // fallback: pokuša da izvuče sa regexom
-  const m = url.match(/(?:v=|\/embed\/|\.be\/|\/shorts\/|\/v\/)([A-Za-z0-9_-]{11})/);
+  // uklanja sve posle videa (?si=... itd)
+  const clean = url.split(/[?&]/)[0];
+  const m = clean.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
 // Učita CSV, parsira timestamp, title i sortira po timestamp‑u opadajuće
 async function fetchList() {
-  const res = await fetch(CSV_URL);
+  // cache‑buster kako bi uvek dohvatili najnoviji CSV
+  const url = `${CSV_URL}&_=${Date.now()}`;
+  const res = await fetch(url, {
+    headers: { 'Cache-Control': 'no-cache' }
+  });
   const txt = await res.text();
   return txt
     .trim()
     .split('\n')
     .slice(1)
     .map(line => {
-      const [ts, url, ...rest] = line.split(',');
-      const id    = extractId(url);
+      const [ts, rawUrl, ...rest] = line.split(',');
+      const id    = extractId(rawUrl.trim());
       if (!id) return null;
       const title = rest.join(',').trim() || id;
       return {
@@ -99,7 +81,7 @@ builder.defineMetaHandler(async ({ id, type }) => {
     meta: {
       id,
       type,
-      name:        entry.name || id,
+      name:        entry.name   || id,
       poster:      entry.poster || `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
       description: '',
       runtime:     0,
@@ -118,7 +100,7 @@ builder.defineStreamHandler(async ({ type, id }) => {
 
   return {
     streams: [{
-      title:  `YouTube stream`,
+      title:  `YouTube stream (${id})`,
       url:    apiUrl,
       isLive: false
     }]
