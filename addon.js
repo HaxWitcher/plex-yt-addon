@@ -7,11 +7,7 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX
 
 // Round‑robin API baze
 const STREAM_APIS = [
-  'https://plex-yt-dl-plex-yt.hf.space'
-  //'https://my-app-love-first-app.hf.space',//
-  //'https://ivan-apps-ivan-ai-download.hf.space',//
-  //'https://ai-yt-test-yt-app.hf.space'//
-  //'https://haxwitcher-yt5-plex.hf.space'//
+  'https://ger-user1-testapp.hf.space'
 ];
 let rrIndex = 0;
 function getNextApi() {
@@ -20,15 +16,14 @@ function getNextApi() {
   return api;
 }
 
-// Izvlači YouTube ID iz URL-a (bilo da je youtube.com/watch ili youtu.be)
+// Izvlači YouTube ID iz URL-a
 function extractId(rawUrl) {
-  // otkloni query parametre
   const clean = rawUrl.split(/[?&]/)[0];
   const m = clean.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
-// Učita CSV, parsira timestamp, title i sortira po timestamp-u opadajuće
+// Učita CSV, parsira i sortira
 async function fetchList() {
   const res = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-cache' } });
   const txt = await res.text();
@@ -55,11 +50,9 @@ async function fetchList() {
 const manifest = require('./manifest.json');
 const builder  = new addonBuilder(manifest);
 
-// === Catalog handler ===
+// Catalog handler
 builder.defineCatalogHandler(async ({ id }) => {
-  if (id !== 'yt-sheet') {
-    return { metas: [] };
-  }
+  if (id !== 'yt-sheet') return { metas: [] };
   const list = await fetchList();
   return {
     metas: list.map(v => ({
@@ -71,7 +64,7 @@ builder.defineCatalogHandler(async ({ id }) => {
   };
 });
 
-// === Meta handler ===
+// Meta handler
 builder.defineMetaHandler(async ({ id, type }) => {
   const list  = await fetchList();
   const entry = list.find(v => v.id === id) || {};
@@ -87,19 +80,34 @@ builder.defineMetaHandler(async ({ id, type }) => {
   };
 });
 
-// === Stream handler ===
+// **Stream handler** — ovde pratimo redirect i izbacujemo direktan .googlevideo.com URL
 builder.defineStreamHandler(async ({ type, id }) => {
-  if (type !== 'channel') {
-    return { streams: [] };
-  }
+  if (type !== 'channel') return { streams: [] };
+
   const youtubeUrl = `https://www.youtube.com/watch?v=${id}`;
   const base       = getNextApi();
   const apiUrl     = `${base}/stream/?url=${encodeURIComponent(youtubeUrl)}&resolution=1080`;
 
+  // pokušamo HEAD zahtevom da dobijemo Location zaglavlje
+  let streamUrl = apiUrl;
+  try {
+    const res = await fetch(apiUrl, {
+      method:   'HEAD',
+      redirect: 'manual'
+    });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location');
+      if (loc) streamUrl = loc;
+    }
+  }
+  catch (err) {
+    console.warn('Ne mogu da dohvatim redirect, vraćam original API URL', err);
+  }
+
   return {
     streams: [{
-      title:  `YouTube stream`,
-      url:    apiUrl,
+      title:  `YouTube 1080p`,
+      url:    streamUrl,
       isLive: false
     }]
   };
