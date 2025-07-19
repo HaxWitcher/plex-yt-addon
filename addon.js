@@ -7,7 +7,7 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX
 
 // Round‑robin API baze
 const STREAM_APIS = [
-  'https://ger-user1-testapp.hf.space'
+  'https://plex-yt-dl-plex-yt.hf.space'
 ];
 let rrIndex = 0;
 function getNextApi() {
