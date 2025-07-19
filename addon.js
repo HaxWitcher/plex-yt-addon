@@ -50,9 +50,11 @@ async function fetchList() {
 const manifest = require('./manifest.json');
 const builder  = new addonBuilder(manifest);
 
-// Catalog handler
+// === Catalog handler ===
 builder.defineCatalogHandler(async ({ id }) => {
-  if (id !== 'yt-sheet') return { metas: [] };
+  if (id !== 'yt-sheet') {
+    return { metas: [] };
+  }
   const list = await fetchList();
   return {
     metas: list.map(v => ({
@@ -64,7 +66,7 @@ builder.defineCatalogHandler(async ({ id }) => {
   };
 });
 
-// Meta handler
+// === Meta handler ===
 builder.defineMetaHandler(async ({ id, type }) => {
   const list  = await fetchList();
   const entry = list.find(v => v.id === id) || {};
@@ -80,28 +82,33 @@ builder.defineMetaHandler(async ({ id, type }) => {
   };
 });
 
-// **Stream handler** — ovde pratimo redirect i izbacujemo direktan .googlevideo.com URL
+// === Stream handler ===
 builder.defineStreamHandler(async ({ type, id }) => {
-  if (type !== 'channel') return { streams: [] };
+  if (type !== 'channel') {
+    return { streams: [] };
+  }
 
   const youtubeUrl = `https://www.youtube.com/watch?v=${id}`;
   const base       = getNextApi();
   const apiUrl     = `${base}/stream/?url=${encodeURIComponent(youtubeUrl)}&resolution=1080`;
 
-  // pokušamo HEAD zahtevom da dobijemo Location zaglavlje
+  // GET zahtev bez automatskog redirectovanja
   let streamUrl = apiUrl;
   try {
     const res = await fetch(apiUrl, {
-      method:   'HEAD',
+      method:   'GET',
       redirect: 'manual'
     });
+    // uhvati 3xx redirect i uzmi pravi GoogleVideo URL
     if (res.status >= 300 && res.status < 400) {
       const loc = res.headers.get('location');
-      if (loc) streamUrl = loc;
+      if (loc) {
+        streamUrl = loc;
+      }
     }
   }
   catch (err) {
-    console.warn('Ne mogu da dohvatim redirect, vraćam original API URL', err);
+    console.warn('Ne mogu dohvatiti redirect, vraćam original API URL', err);
   }
 
   return {
