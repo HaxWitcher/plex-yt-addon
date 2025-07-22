@@ -1,13 +1,12 @@
-// addon.js
 const fetch            = require('node-fetch');
 const { addonBuilder } = require('stremio-addon-sdk');
 
 // Javna CSV lista
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX8ApUjUe2mCbjHrd3OR4HJ46OH3ai2wLHwkWR5_1dIp3BDjQpq4wHgsi1_pDEeuSi/pub?output=csv';
 
-// Round‑robin API baze (samo jedna baza, možeš dodati više)
+// Round‑robin API baze (sada samo jedna, možeš dodati više)
 const STREAM_APIS = [
-  'https://plex-media-yt-usluga.hf.space/stream'
+  'https://plex-media-yt-usluga.hf.space'
 ];
 let rrIndex = 0;
 function getNextApi() {
@@ -16,21 +15,20 @@ function getNextApi() {
   return api;
 }
 
-// Izvlači YouTube ID iz URL-a (podržava i ?si=...)
+// Izvlači YouTube ID iz bilo kog YouTube URL‑a
 function extractId(rawUrl) {
   const clean = rawUrl.split(/[?&]/)[0];
   const m = clean.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
-// Učita CSV, parsira i sortira po timestamp-u opadajuće
+// Učita CSV, parsira timestamp, title i sortira po timestamp‑u opadajuće
 async function fetchList() {
   const res = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-cache' } });
   const txt = await res.text();
   return txt
     .trim()
-    .split('\n')
-    .slice(1)
+    .split('\n').slice(1)
     .map(line => {
       const [ts, url, ...rest] = line.split(',');
       const id    = extractId(url);
@@ -57,13 +55,13 @@ builder.defineCatalogHandler(async ({ id }) => {
   }
   const list = await fetchList();
   return {
-    metas: list.map(v => ({
+    metas:       list.map(v => ({
       id:     v.id,
       type:   'channel',
       name:   v.name,
       poster: v.poster,
     })),
-    cacheMaxAge: 0    // svaki put sveži podaci iz CSV
+    cacheMaxAge: 0
   };
 });
 
@@ -78,7 +76,7 @@ builder.defineMetaHandler(async ({ id, type }) => {
       name:        entry.name   || id,
       poster:      entry.poster || `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
       description: '',
-      runtime:     0,
+      runtime:     0
     }
   };
 });
@@ -88,13 +86,12 @@ builder.defineStreamHandler(async ({ type, id }) => {
   if (type !== 'channel') {
     return { streams: [] };
   }
-
-  const base      = getNextApi();         // npr. https://plex-media-yt-usluga.hf.space/stream
-  const streamUrl = `${base}/${id}`;      // npr. .../stream/X9WXyeMBYc
+  const apiBase  = getNextApi();
+  const streamUrl = `${apiBase}/stream/${id}`;
 
   return {
     streams: [{
-      title:  `YouTube 1080p`,
+      title:  'YouTube 1080p',
       url:    streamUrl,
       isLive: false
     }]
