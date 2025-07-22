@@ -5,9 +5,9 @@ const { addonBuilder } = require('stremio-addon-sdk');
 // Javna CSV lista
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX8ApUjUe2mCbjHrd3OR4HJ46OH3ai2wLHwkWR5_1dIp3BDjQpq4wHgsi1_pDEeuSi/pub?output=csv';
 
-// Round‑robin API baze
+// Round‑robin API baze (sada samo jedan, ali možeš dodati više)
 const STREAM_APIS = [
-  'https://plex-yt-dl-plex-yt.hf.space'
+  'https://plex-media-yt-usluga.hf.space/stream'
 ];
 let rrIndex = 0;
 function getNextApi() {
@@ -16,14 +16,14 @@ function getNextApi() {
   return api;
 }
 
-// Izvlači YouTube ID iz URL-a
+// Izvlači YouTube ID iz URL-a (podržava i ?si= ...)
 function extractId(rawUrl) {
   const clean = rawUrl.split(/[?&]/)[0];
   const m = clean.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
-// Učita CSV, parsira i sortira
+// Učita CSV, parsira i sortira po timestamp-u opadajuće
 async function fetchList() {
   const res = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-cache' } });
   const txt = await res.text();
@@ -88,28 +88,9 @@ builder.defineStreamHandler(async ({ type, id }) => {
     return { streams: [] };
   }
 
-  const youtubeUrl = `https://www.youtube.com/watch?v=${id}`;
-  const base       = getNextApi();
-  const apiUrl     = `${base}/stream/?url=${encodeURIComponent(youtubeUrl)}&resolution=1080`;
-
-  // GET zahtev bez automatskog redirectovanja
-  let streamUrl = apiUrl;
-  try {
-    const res = await fetch(apiUrl, {
-      method:   'GET',
-      redirect: 'manual'
-    });
-    // uhvati 3xx redirect i uzmi pravi GoogleVideo URL
-    if (res.status >= 300 && res.status < 400) {
-      const loc = res.headers.get('location');
-      if (loc) {
-        streamUrl = loc;
-      }
-    }
-  }
-  catch (err) {
-    console.warn('Ne mogu dohvatiti redirect, vraćam original API URL', err);
-  }
+  // Round‑robin odabir API baze
+  const base     = getNextApi();               // npr. https://plex-media-yt-usluga.hf.space/stream
+  const streamUrl = `${base}/${id}`;           // npr. .../stream/X9WXyeMBYc
 
   return {
     streams: [{
