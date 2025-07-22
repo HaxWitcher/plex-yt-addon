@@ -1,3 +1,4 @@
+// addon.js
 const fetch            = require('node-fetch');
 const { addonBuilder } = require('stremio-addon-sdk');
 
@@ -14,6 +15,9 @@ function getNextApi() {
   rrIndex = (rrIndex + 1) % STREAM_APIS.length;
   return api;
 }
+
+// In‑memory keš za stream URL‑ove
+const streamCache = new Map();
 
 // Izvlači YouTube ID iz bilo kog YouTube URL‑a
 function extractId(rawUrl) {
@@ -61,7 +65,7 @@ builder.defineCatalogHandler(async ({ id }) => {
       name:   v.name,
       poster: v.poster,
     })),
-    cacheMaxAge: 0
+    cacheMaxAge: 0   // uvek osveži pri svakom otvaranju katalog
   };
 });
 
@@ -86,15 +90,45 @@ builder.defineStreamHandler(async ({ type, id }) => {
   if (type !== 'channel') {
     return { streams: [] };
   }
-  const apiBase  = getNextApi();
-  const streamUrl = `${apiBase}/stream/${id}`;
+
+  // Ako imamo keširanu URL za ovaj ID, vratimo je odmah
+  if (streamCache.has(id)) {
+    return {
+      streams: [{
+        title:  'YouTube 1080p',
+        url:    streamCache.get(id),
+        isLive: false
+      }],
+      cacheMaxAge: 3600  // keširaj 1h na strani klijenta
+    };
+  }
+
+  // Prvi put: generišemo stream URL
+  const apiBase   = getNextApi();
+  const apiStream = `${apiBase}/stream/${id}`;
+  let   streamUrl = apiStream;
+
+  try {
+    const res = await fetch(apiStream, { method: 'GET', redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location');
+      if (loc) streamUrl = loc;
+    }
+  }
+  catch (err) {
+    console.warn('Stream fetch error, vraćam osnovni API URL', err);
+  }
+
+  // Keširaj rezultat za naredne pozive
+  streamCache.set(id, streamUrl);
 
   return {
     streams: [{
       title:  'YouTube 1080p',
       url:    streamUrl,
       isLive: false
-    }]
+    }],
+    cacheMaxAge: 3600
   };
 });
 
