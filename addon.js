@@ -8,8 +8,7 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX
 
 // 2) Više HF space-ova za round‑robin
 const STREAM_APIS = [
-  'https://plex-media-yt-usluga.hf.space',
-  'https://ger-user1-test-pl-dl.hf.space'
+  'https://plex-media-yt-usluga.hf.space'
 ];
 let rrIndex = 0;
 function getNextApi() {
