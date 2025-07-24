@@ -1,12 +1,11 @@
 // addon.js
 const fetch            = require('node-fetch');
 const { addonBuilder } = require('stremio-addon-sdk');
-const manifest         = require('./manifest.json');
 
-// 1) Tvoj Google Sheets CSV
+// Javna CSV lista
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX8ApUjUe2mCbjHrd3OR4HJ46OH3ai2wLHwkWR5_1dIp3BDjQpq4wHgsi1_pDEeuSi/pub?output=csv';
 
-// 2) Lista HF space-ova za round‑robin
+// Round‑robin API baze
 const STREAM_APIS = [
   'https://plex-media-yt-usluga.hf.space',
   'https://ger-user1-test-pl-dl.hf.space'
@@ -18,22 +17,31 @@ function getNextApi() {
   return api;
 }
 
-// 3) Parsiranje CSV u listu kanala
+// Izvlači YouTube ID iz URL-a (bilo da je youtube.com/watch ili youtu.be)
+function extractId(rawUrl) {
+  // otkloni query parametre
+  const clean = rawUrl.split(/[?&]/)[0];
+  const m = clean.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+// Učita CSV, parsira timestamp, title i sortira po timestamp-u opadajuće
 async function fetchList() {
   const res = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-cache' } });
   const txt = await res.text();
   return txt
     .trim()
-    .split('\n').slice(1)
+    .split('\n')
+    .slice(1)
     .map(line => {
       const [ts, url, ...rest] = line.split(',');
-      const clean = url.split(/[?&]/)[0];
-      const m = clean.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-      if (!m) return null;
+      const id    = extractId(url);
+      if (!id) return null;
+      const title = rest.join(',').trim() || id;
       return {
-        id:     m[1],
-        name:   (rest.join(',').trim() || m[1]),
-        poster: `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`,
+        id,
+        name:   title,
+        poster: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
         ts:     new Date(ts),
       };
     })
@@ -41,12 +49,13 @@ async function fetchList() {
     .sort((a, b) => b.ts - a.ts);
 }
 
-const builder = new addonBuilder(manifest);
+const manifest = require('./manifest.json');
+const builder  = new addonBuilder(manifest);
 
 // === Catalog handler ===
 builder.defineCatalogHandler(async ({ id }) => {
   if (id !== 'yt-sheet') {
-    return { metas: [], cacheMaxAge: 0 };
+    return { metas: [] };
   }
   const list = await fetchList();
   return {
@@ -55,8 +64,7 @@ builder.defineCatalogHandler(async ({ id }) => {
       type:   'channel',
       name:   v.name,
       poster: v.poster,
-    })),
-    cacheMaxAge: 0    // svaki put ponovo čitaj CSV
+    }))
   };
 });
 
@@ -71,30 +79,26 @@ builder.defineMetaHandler(async ({ id, type }) => {
       name:        entry.name   || id,
       poster:      entry.poster || `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
       description: '',
-      runtime:     0
-    },
-    cacheMaxAge: 0    // uvijek svježe
+      runtime:     0,
+    }
   };
 });
 
 // === Stream handler ===
-builder.defineStreamHandler(({ type, id }) => {
+builder.defineStreamHandler(async ({ type, id }) => {
   if (type !== 'channel') {
     return { streams: [] };
   }
-
-  // Round‑robin odabir space-a
-  const base      = getNextApi();
-  // Direktno formiramo ispravan URL
-  const streamUrl = `${base}/stream/${id}`;
+  const youtubeUrl = `https://www.youtube.com/watch?v=${id}`;
+  const base       = getNextApi();
+  const apiUrl     = `${base}/stream/?url=${encodeURIComponent(youtubeUrl)}&resolution=1080`;
 
   return {
     streams: [{
-      title:  'YouTube 1080p',
-      url:    streamUrl,
+      title:  `YouTube stream`,
+      url:    apiUrl,
       isLive: false
-    }],
-    cacheMaxAge: 0    // Stremio će svaki put pitati addon
+    }]
   };
 });
 
