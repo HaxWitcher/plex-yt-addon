@@ -7,7 +7,8 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX
 
 // Round‑robin API baze (sada samo jedna, možeš dodati više)
 const STREAM_APIS = [
-  'http://91.99.224.143:7860'
+  'https://plex-media-yt-usluga.hf.space',
+  'https://ger-user1-test-pl-dl.hf.space'
 ];
 let rrIndex = 0;
 function getNextApi() {
