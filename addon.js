@@ -3,10 +3,10 @@ const fetch            = require('node-fetch');
 const { addonBuilder } = require('stremio-addon-sdk');
 const manifest         = require('./manifest.json');
 
-// 1) Javna CSV lista iz Google Sheets
+// 1) Tvoj Google Sheets CSV
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTe-SkouXuRu5EX8ApUjUe2mCbjHrd3OR4HJ46OH3ai2wLHwkWR5_1dIp3BDjQpq4wHgsi1_pDEeuSi/pub?output=csv';
 
-// 2) HF space-ovi za round‑robin
+// 2) Lista HF space-ova za round‑robin
 const STREAM_APIS = [
   'https://plex-media-yt-usluga.hf.space',
   'https://ger-user1-test-pl-dl.hf.space'
@@ -18,7 +18,7 @@ function getNextApi() {
   return api;
 }
 
-// 3) Učitava i parsira CSV svaki put
+// 3) Parsiranje CSV u listu kanala
 async function fetchList() {
   const res = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-cache' } });
   const txt = await res.text();
@@ -56,7 +56,7 @@ builder.defineCatalogHandler(async ({ id }) => {
       name:   v.name,
       poster: v.poster,
     })),
-    cacheMaxAge: 0    // uvek sveže
+    cacheMaxAge: 0    // svaki put ponovo čitaj CSV
   };
 });
 
@@ -73,7 +73,7 @@ builder.defineMetaHandler(async ({ id, type }) => {
       description: '',
       runtime:     0
     },
-    cacheMaxAge: 0    // uvek sveže
+    cacheMaxAge: 0    // uvijek svježe
   };
 });
 
@@ -83,9 +83,10 @@ builder.defineStreamHandler(({ type, id }) => {
     return { streams: [] };
   }
 
-  // Round‑robin i direktno vraćanje API URL-a
-  const apiBase   = getNextApi();
-  const streamUrl = `${apiBase}/stream/${id}`;
+  // Round‑robin odabir space-a
+  const base      = getNextApi();
+  // Direktno formiramo ispravan URL
+  const streamUrl = `${base}/stream/${id}`;
 
   return {
     streams: [{
@@ -93,7 +94,7 @@ builder.defineStreamHandler(({ type, id }) => {
       url:    streamUrl,
       isLive: false
     }],
-    cacheMaxAge: 0    // nema klijentskog keširanja
+    cacheMaxAge: 0    // Stremio će svaki put pitati addon
   };
 });
 
